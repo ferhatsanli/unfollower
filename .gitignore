@@ -1,6 +1,17 @@
-following_cache.json
-session.json
-to_unfollow.txt
-Unfollower.zip
+# Environment
 .venv/
+__pycache__/
+.DS_Store
+
+# Instagram session (sensitive)
+session.json
+
+# Generated personal data
+following_cache.json
+following_sorted.csv
 following.html
+to_unfollow.txt
+unfollowed_log.txt
+
+# Release archive
+Unfollower.zip
