@@ -18,6 +18,18 @@ On the first run, `run.sh` creates a `.venv` virtual environment and installs th
 libraries from `requirements.txt`. Later runs skip the install. Python 3.10+ is required
 (`brew install python`).
 
+## How a run works
+
+1. Fetches the accounts you follow and their follower counts (cached between runs).
+2. If Instagram starts throttling (HTTP 429, "please wait" etc.), scanning stops
+   immediately and you continue with the accounts scanned so far. The next run picks
+   up the unscanned ones, and stops the same way if it is throttled again.
+3. Asks which installed browser to open the selection page in.
+4. On the page, click anywhere on a row to select it; the Instagram icon opens that
+   profile in a new tab. Accounts already unfollowed, or still queued from an earlier
+   run, are not shown again.
+5. After Save, queued accounts from earlier runs go first, then your new selection.
+
 ## Options
 
 - `--demo`: opens the UI with fake data and sends nothing.

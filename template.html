@@ -55,7 +55,7 @@
   .pill-btn:hover { background: var(--hover); }
 
   .head, .row {
-    display: grid; grid-template-columns: 28px 1fr auto;
+    display: grid; grid-template-columns: 28px 1fr auto 28px;
     align-items: center; gap: 12px; padding: 0 18px;
   }
   .head { color: var(--muted); font-size: 12px; text-transform: uppercase;
@@ -87,6 +87,12 @@
   .user { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
   .user small { color: var(--muted); font-weight: 400; margin-left: 6px; }
   .count { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .ig {
+    width: 28px; height: 28px; border-radius: 999px;
+    display: grid; place-content: center; color: var(--muted);
+  }
+  .ig:hover { color: #e1306c; background: var(--bg); }
+  .ig svg { width: 16px; height: 16px; display: block; }
 
   .bar {
     position: fixed; left: 0; right: 0; bottom: 0;
@@ -116,7 +122,15 @@
     <button class="pill-btn" id="clear" type="button">Clear selection</button>
   </div>
 
-  <div class="head"><span></span><span>Instagram ID</span><span>Followers</span></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="ig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/>
+      <circle cx="12" cy="12" r="4.3"/>
+      <circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/>
+    </symbol>
+  </svg>
+
+  <div class="head"><span></span><span>Instagram ID</span><span>Followers</span><span></span></div>
   <div class="list" id="list"></div>
   <div class="empty" id="empty" hidden>No matches</div>
 </div>
@@ -130,13 +144,16 @@
 
 <script>
   const DATA = /*__DATA__*/[];
+  const META = /*__META__*/{};
   const selected = new Set();
   const list = document.getElementById("list");
   const status = document.getElementById("status");
   const fmt = new Intl.NumberFormat("en-US");
 
-  document.getElementById("sub").textContent =
-    `${fmt.format(DATA.length)} accounts, sorted by follower count`;
+  const notes = [`${fmt.format(DATA.length)} accounts, sorted by follower count`];
+  if (META.unscanned) notes.push(`${fmt.format(META.unscanned)} not scanned yet (next run)`);
+  if (META.queued) notes.push(`${fmt.format(META.queued)} already queued from last run`);
+  document.getElementById("sub").textContent = notes.join(" · ");
 
   // Build all rows once; filtering just toggles `hidden` (no re-render).
   const frag = document.createDocumentFragment();
@@ -163,7 +180,15 @@
     count.className = "count";
     count.textContent = a.f < 0 ? "—" : fmt.format(a.f);
 
-    row.append(box, user, count);
+    const link = document.createElement("a");
+    link.className = "ig";
+    link.href = "https://www.instagram.com/" + encodeURIComponent(a.u) + "/";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.title = "Open @" + a.u + " on Instagram";
+    link.innerHTML = '<svg><use href="#ig"/></svg>';
+
+    row.append(box, user, count, link);
     frag.appendChild(row);
   }
   list.appendChild(frag);
@@ -175,6 +200,7 @@
 
   // One delegated listener: clicking anywhere on a row toggles it.
   list.addEventListener("click", (e) => {
+    if (e.target.closest("a")) return;  // the Instagram link opens a tab, no toggle
     const row = e.target.closest(".row");
     if (!row) return;
     const box = row.firstChild;

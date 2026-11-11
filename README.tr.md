@@ -18,6 +18,18 @@ cd unfollower
 kütüphaneleri kurar. Sonraki çalıştırmalarda kurulum atlanır. Python 3.10+ gerekir
 (`brew install python`).
 
+## Bir çalıştırma nasıl ilerler
+
+1. Takip ettiğin hesapları ve takipçi sayılarını çeker (sonuçlar çalıştırmalar arasında saklanır).
+2. Instagram istekleri sınırlamaya başlarsa (HTTP 429, "please wait" vb.) tarama hemen durur
+   ve o ana kadar taranan hesaplarla devam edersin. Bir sonraki çalıştırma taranmamış
+   hesaplardan devam eder; yine sınırlanırsa aynı şekilde durur.
+3. Seçim sayfasının hangi tarayıcıda açılacağını sorar.
+4. Sayfada satırın herhangi bir yerine tıklayınca seçilir; Instagram simgesi o profili yeni
+   sekmede açar. Daha önce takipten çıkılan veya önceki çalıştırmadan kuyrukta bekleyen
+   hesaplar tekrar gösterilmez.
+5. Save'den sonra önce önceki çalıştırmalardan kuyrukta kalanlar, sonra yeni seçtiklerin işlenir.
+
 ## Seçenekler
 
 - `--demo`: arayüzü sahte veriyle açar, hiçbir şey göndermez.
