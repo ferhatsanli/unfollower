@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Following</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --line: #d2d2d7;
+    --hover: #f0f0f3;
+    --accent: #007aff;
+    --accent-soft: #e5f0ff;
+    --danger: #ff3b30;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --card: #2c2c2e;
+      --text: #f5f5f7;
+      --muted: #98989d;
+      --line: #3a3a3c;
+      --hover: #3a3a3c;
+      --accent: #0a84ff;
+      --accent-soft: #0a84ff26;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 120px; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 14px; }
+  .search {
+    flex: 1; height: 32px; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); color: var(--text); font: inherit; outline: none;
+  }
+  .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .pill-btn {
+    height: 32px; padding: 0 16px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    font: inherit; cursor: pointer;
+  }
+  .pill-btn:hover { background: var(--hover); }
+
+  .head, .row {
+    display: grid; grid-template-columns: 28px 1fr auto;
+    align-items: center; gap: 12px; padding: 0 18px;
+  }
+  .head { color: var(--muted); font-size: 12px; text-transform: uppercase;
+          letter-spacing: 0.04em; height: 28px; }
+
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .row {
+    height: 44px; border-radius: 999px;            /* oval macOS-style button */
+    background: var(--card); border: 1px solid var(--line);
+    cursor: pointer; user-select: none;
+    content-visibility: auto; contain-intrinsic-size: auto 44px;  /* cheap long lists */
+    transition: background-color .12s, border-color .12s;
+  }
+  .row:hover { background: var(--hover); }
+  .row:active { background: var(--line); }
+  .row.on { background: var(--accent-soft); border-color: var(--accent); }
+
+  .row input {
+    appearance: none; -webkit-appearance: none; margin: 0;
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 1.5px solid var(--line); background: var(--card);
+    display: grid; place-content: center; pointer-events: none;
+  }
+  .row input:checked { background: var(--accent); border-color: var(--accent); }
+  .row input:checked::after {
+    content: ""; width: 9px; height: 5px; margin-top: -2px;
+    border: solid #fff; border-width: 0 0 2px 2px; transform: rotate(-45deg);
+  }
+  .user { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .user small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .count { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--card); border-top: 1px solid var(--line);
+  }
+  .bar-inner {
+    max-width: 640px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .status { color: var(--muted); }
+  .save {
+    height: 36px; padding: 0 28px; border: 0; border-radius: 999px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .save:hover { filter: brightness(1.08); }
+  .save:disabled { opacity: .5; cursor: default; filter: none; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Following</h1>
+  <p class="sub" id="sub"></p>
+
+  <div class="toolbar">
+    <input class="search" id="q" type="search" placeholder="Search" autocomplete="off">
+    <button class="pill-btn" id="clear" type="button">Clear selection</button>
+  </div>
+
+  <div class="head"><span></span><span>Instagram ID</span><span>Followers</span></div>
+  <div class="list" id="list"></div>
+  <div class="empty" id="empty" hidden>No matches</div>
+</div>
+
+<div class="bar">
+  <div class="bar-inner">
+    <span class="status" id="status">0 selected</span>
+    <button class="save" id="save" type="button">Save</button>
+  </div>
+</div>
+
+<script>
+  const DATA = /*__DATA__*/[];
+  const selected = new Set();
+  const list = document.getElementById("list");
+  const status = document.getElementById("status");
+  const fmt = new Intl.NumberFormat("en-US");
+
+  document.getElementById("sub").textContent =
+    `${fmt.format(DATA.length)} accounts, sorted by follower count`;
+
+  // Build all rows once; filtering just toggles `hidden` (no re-render).
+  const frag = document.createDocumentFragment();
+  for (const a of DATA) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.dataset.u = a.u;
+    row.dataset.key = (a.u + " " + a.n).toLowerCase();
+
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.tabIndex = -1;
+
+    const user = document.createElement("span");
+    user.className = "user";
+    user.textContent = "@" + a.u;
+    if (a.n) {
+      const s = document.createElement("small");
+      s.textContent = a.n;
+      user.appendChild(s);
+    }
+
+    const count = document.createElement("span");
+    count.className = "count";
+    count.textContent = a.f < 0 ? "—" : fmt.format(a.f);
+
+    row.append(box, user, count);
+    frag.appendChild(row);
+  }
+  list.appendChild(frag);
+  const rows = [...list.children];
+
+  function updateStatus() {
+    status.textContent = `${selected.size} selected`;
+  }
+
+  // One delegated listener: clicking anywhere on a row toggles it.
+  list.addEventListener("click", (e) => {
+    const row = e.target.closest(".row");
+    if (!row) return;
+    const box = row.firstChild;
+    box.checked = !box.checked;
+    row.classList.toggle("on", box.checked);
+    box.checked ? selected.add(row.dataset.u) : selected.delete(row.dataset.u);
+    updateStatus();
+  });
+
+  let t;
+  document.getElementById("q").addEventListener("input", (e) => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = e.target.value.trim().toLowerCase();
+      let shown = 0;
+      for (const r of rows) {
+        const hit = !q || r.dataset.key.includes(q);
+        r.hidden = !hit;
+        if (hit) shown++;
+      }
+      document.getElementById("empty").hidden = shown > 0;
+    }, 120);
+  });
+
+  document.getElementById("clear").addEventListener("click", () => {
+    selected.clear();
+    for (const r of rows) { r.firstChild.checked = false; r.classList.remove("on"); }
+    updateStatus();
+  });
+
+  const saveBtn = document.getElementById("save");
+  saveBtn.addEventListener("click", async () => {
+    if (!selected.size && !confirm("Nothing selected. Save an empty list?")) return;
+    saveBtn.disabled = true;
+    // Keep the on-screen (sorted) order in the output file.
+    const names = DATA.map(a => a.u).filter(u => selected.has(u));
+    try {
+      const res = await fetch("/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(names),
+      });
+      const out = await res.json();
+      status.textContent = `Saved ${out.saved}. Unfollowing continues in the terminal — you can close this tab.`;
+    } catch (err) {
+      status.textContent = "Save failed: is the Python script still running?";
+      saveBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
